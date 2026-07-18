@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiArrowLeft, FiFileText, FiCpu, FiMessageSquare, FiList, FiMap, FiCheckSquare, FiEdit3, FiCheck, FiPlus, FiTrash2, FiSave } from 'react-icons/fi';
+import { FiArrowLeft, FiFileText, FiCpu, FiMessageSquare, FiList, FiMap, FiCheckSquare, FiEdit3, FiCheck, FiPlus, FiTrash2, FiSave, FiDownload } from 'react-icons/fi';
 import mermaid from 'mermaid';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 
 mermaid.initialize({
   startOnLoad: true,
@@ -107,6 +109,72 @@ const DocumentView = () => {
     setTodos(todos.filter(t => t.id !== todoId));
   };
 
+  const handleExportTXT = () => {
+    let text = '';
+    if (activeTab === 'summary' || activeTab === 'notes') {
+      text = content[activeTab]?.data?.text || '';
+    } else if (activeTab === 'workspace') {
+      text = `User Notes:\n${userNotes}\n\nTodos:\n${todos.map(t => `- [${t.completed ? 'x' : ' '}] ${t.text}`).join('\n')}`;
+    } else if (activeTab === 'quiz') {
+      text = content.quiz?.data?.questions?.map((q, idx) => `Q${idx+1}. ${q.question}\n${q.options.map((o, i) => `  ${String.fromCharCode(65+i)}) ${o}`).join('\n')}`).join('\n\n') || '';
+    }
+    
+    if (!text) {
+      alert("No text content available to export.");
+      return;
+    }
+    
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = window.document.createElement('a');
+    a.href = url;
+    a.download = `${document?.title}-${activeTab}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportMedia = async (format) => {
+    const el = window.document.getElementById('export-content');
+    if (!el) return;
+    
+    try {
+      const imgData = await toPng(el, { backgroundColor: '#ffffff', pixelRatio: 2 });
+
+      if (format === 'png') {
+        const a = window.document.createElement('a');
+        a.href = imgData;
+        a.download = `${document?.title}-${activeTab}.png`;
+        a.click();
+      } else if (format === 'pdf') {
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        let position = 0;
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Handle multi-page PDF if content is taller than A4
+        if (pdfHeight > pageHeight) {
+          while (position < pdfHeight) {
+            pdf.addImage(imgData, 'PNG', 0, position * -1, pdfWidth, pdfHeight);
+            position += pageHeight;
+            if (position < pdfHeight) {
+              pdf.addPage();
+            }
+          }
+        } else {
+           pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        }
+        
+        pdf.save(`${document?.title}-${activeTab}.pdf`);
+      }
+    } catch (err) {
+      console.error("Export failed", err);
+      alert("Failed to export. Please try again.");
+    }
+  };
+
   if (!document) return <div className="p-12 text-center text-slate-500">Loading document...</div>;
 
   const tabs = [
@@ -174,29 +242,48 @@ const DocumentView = () => {
           {/* Tab Content Header */}
           <div className="flex justify-between items-center mb-8 border-b border-slate-200 dark:border-zinc-700/50 pb-5">
             <h2 className="text-3xl font-extrabold capitalize bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">{activeTab.replace('-', ' ')}</h2>
-            {activeTab === 'workspace' ? (
-              <button 
-                onClick={saveWorkspace}
-                disabled={savingWorkspace}
-                className="btn-primary flex items-center shadow-indigo-500/30"
-              >
-                <span className="relative z-10 flex items-center">
-                  {savingWorkspace ? 'Saving...' : 'Save Workspace'}
-                  {!savingWorkspace && <FiSave className="ml-2 w-5 h-5" />}
-                </span>
-              </button>
-            ) : activeTab !== 'chat' && (
-              <button 
-                onClick={() => generateContent(activeTab)}
-                disabled={loading}
-                className="btn-primary flex items-center shadow-indigo-500/30"
-              >
-                <span className="relative z-10 flex items-center">
-                  {loading ? 'Generating...' : `Generate ${activeTab.replace('-', ' ')}`}
-                  {!loading && <FiCpu className="ml-2 w-5 h-5" />}
-                </span>
-              </button>
-            )}
+            <div className="flex items-center space-x-3">
+              {/* Export Buttons */}
+              {(content[activeTab] || activeTab === 'workspace') && activeTab !== 'chat' && activeTab !== 'mindmap' && (
+                <div className="flex space-x-2 mr-4 border-r border-slate-200 dark:border-zinc-700 pr-4">
+                  <button onClick={handleExportTXT} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors flex items-center shadow-sm border border-slate-200 dark:border-zinc-700" title="Export as TXT"><FiFileText className="w-3.5 h-3.5 mr-1.5"/> TXT</button>
+                  <button onClick={() => handleExportMedia('png')} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors flex items-center shadow-sm border border-slate-200 dark:border-zinc-700" title="Export as PNG"><FiDownload className="w-3.5 h-3.5 mr-1.5"/> PNG</button>
+                  <button onClick={() => handleExportMedia('pdf')} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors flex items-center shadow-sm border border-slate-200 dark:border-zinc-700" title="Export as PDF"><FiDownload className="w-3.5 h-3.5 mr-1.5"/> PDF</button>
+                </div>
+              )}
+              {/* Mindmap specific exports (TXT doesn't make sense for mindmap) */}
+              {content[activeTab] && activeTab === 'mindmap' && (
+                <div className="flex space-x-2 mr-4 border-r border-slate-200 dark:border-zinc-700 pr-4">
+                  <button onClick={() => handleExportMedia('png')} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors flex items-center shadow-sm border border-slate-200 dark:border-zinc-700" title="Export as PNG"><FiDownload className="w-3.5 h-3.5 mr-1.5"/> PNG</button>
+                  <button onClick={() => handleExportMedia('pdf')} className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors flex items-center shadow-sm border border-slate-200 dark:border-zinc-700" title="Export as PDF"><FiDownload className="w-3.5 h-3.5 mr-1.5"/> PDF</button>
+                </div>
+              )}
+              
+              {/* Primary Action Button */}
+              {activeTab === 'workspace' ? (
+                <button 
+                  onClick={saveWorkspace}
+                  disabled={savingWorkspace}
+                  className="btn-primary flex items-center shadow-indigo-500/30"
+                >
+                  <span className="relative z-10 flex items-center">
+                    {savingWorkspace ? 'Saving...' : 'Save Workspace'}
+                    {!savingWorkspace && <FiSave className="ml-2 w-5 h-5" />}
+                  </span>
+                </button>
+              ) : activeTab !== 'chat' && (
+                <button 
+                  onClick={() => generateContent(activeTab)}
+                  disabled={loading}
+                  className="btn-primary flex items-center shadow-indigo-500/30"
+                >
+                  <span className="relative z-10 flex items-center">
+                    {loading ? 'Generating...' : `Generate ${activeTab.replace('-', ' ')}`}
+                    {!loading && <FiCpu className="ml-2 w-5 h-5" />}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Tab Content Display */}
@@ -209,6 +296,7 @@ const DocumentView = () => {
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.3 }}
                 className="h-full"
+                id="export-content"
               >
                 {!content[activeTab] && activeTab !== 'chat' && activeTab !== 'workspace' ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400">

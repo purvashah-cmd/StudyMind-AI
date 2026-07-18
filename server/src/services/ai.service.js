@@ -192,17 +192,19 @@ const generateMindMap = async (documentId) => {
     
     const prompt = PromptTemplate.fromTemplate(`
       You are an expert study assistant. 
-      Create a concise hierarchical mind map based on the text below.
+      Analyze the text below and extract ONLY the most important main sections and their immediate primary sub-points.
+      Create a highly concise, easily readable hierarchical mind map.
       Output the mind map using ONLY valid Mermaid.js graph syntax (graph TD).
       Do NOT include any markdown formatting like \`\`\`mermaid or text outside the graph code.
-      Limit the mind map to a maximum of 3 levels deep.
-      Use brief, clear labels for nodes.
+      STRICT LIMIT: Maximum of 2 levels deep (Main Node -> Primary Headings -> Secondary Headings).
+      Use extremely brief, 1-3 word clear labels for nodes to ensure visibility.
       CRITICAL: You MUST wrap all node labels in double quotes to prevent syntax errors!
       
       Example:
       graph TD
-        A["Main Topic"] --> B["Subtopic 1"]
-        A --> C["Subtopic 2"]
+        A["Core Subject"] --> B["Key Concept 1"]
+        A --> C["Key Concept 2"]
+        B --> D["Sub-concept A"]
       
       Document Text:
       {context}
