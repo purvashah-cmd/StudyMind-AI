@@ -1,4 +1,4 @@
-# StudyMind AI ✨
+# StudyMind AI 
 
 Welcome to **StudyMind AI**, a next-generation, AI-powered study companion designed to help you learn faster and more effectively. By leveraging cutting-edge Large Language Models (Google Gemini) and advanced RAG (Retrieval-Augmented Generation), StudyMind transforms any document into an interactive, personalized learning environment.
 
