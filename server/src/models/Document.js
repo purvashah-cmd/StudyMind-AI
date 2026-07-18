@@ -43,6 +43,18 @@ const documentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    userNotes: {
+      type: String,
+      default: '',
+    },
+    todos: [{
+      id: String,
+      text: String,
+      completed: {
+        type: Boolean,
+        default: false,
+      }
+    }],
   },
   {
     timestamps: true,

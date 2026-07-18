@@ -203,6 +203,29 @@ const getDocumentContent = async (req, res) => {
   }
 };
 
+// @desc    Update workspace (user notes and todos)
+// @route   PUT /api/documents/:id/workspace
+// @access  Private
+const updateWorkspace = async (req, res) => {
+  try {
+    const { userNotes, todos } = req.body;
+    
+    const document = await Document.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { userNotes, todos },
+      { new: true }
+    );
+    
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    res.json(document);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   uploadDocument,
   getDocuments,
@@ -212,5 +235,6 @@ module.exports = {
   softDeleteDocument,
   restoreDocument,
   permanentDeleteDocument,
-  getDocumentContent
+  getDocumentContent,
+  updateWorkspace
 };

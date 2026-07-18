@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiArrowLeft, FiFileText, FiCpu, FiMessageSquare, FiList, FiMap, FiCheckSquare } from 'react-icons/fi';
+import { FiArrowLeft, FiFileText, FiCpu, FiMessageSquare, FiList, FiMap, FiCheckSquare, FiEdit3, FiCheck, FiPlus, FiTrash2, FiSave } from 'react-icons/fi';
 import mermaid from 'mermaid';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 mermaid.initialize({
   startOnLoad: true,
@@ -24,6 +26,12 @@ const DocumentView = () => {
   const [activeTab, setActiveTab] = useState('summary');
   const [content, setContent] = useState({});
   const [loading, setLoading] = useState(false);
+  
+  // Workspace state
+  const [userNotes, setUserNotes] = useState('');
+  const [todos, setTodos] = useState([]);
+  const [todoInput, setTodoInput] = useState('');
+  const [savingWorkspace, setSavingWorkspace] = useState(false);
 
   useEffect(() => {
     fetchDocument();
@@ -35,6 +43,10 @@ const DocumentView = () => {
       const { data } = await api.get('/documents');
       const doc = data.find(d => d._id === id);
       setDocument(doc);
+      if (doc) {
+        setUserNotes(doc.userNotes || '');
+        setTodos(doc.todos || []);
+      }
     } catch (error) {
       console.error('Failed to fetch document', error);
     }
@@ -68,6 +80,33 @@ const DocumentView = () => {
     }
   };
 
+  const saveWorkspace = async () => {
+    setSavingWorkspace(true);
+    try {
+      await api.put(`/documents/${id}/workspace`, { userNotes, todos });
+    } catch (error) {
+      console.error('Failed to save workspace', error);
+      alert('Failed to save workspace');
+    } finally {
+      setSavingWorkspace(false);
+    }
+  };
+
+  const handleAddTodo = (e) => {
+    e.preventDefault();
+    if (!todoInput.trim()) return;
+    setTodos([...todos, { id: Date.now().toString(), text: todoInput, completed: false }]);
+    setTodoInput('');
+  };
+
+  const toggleTodo = (todoId) => {
+    setTodos(todos.map(t => t.id === todoId ? { ...t, completed: !t.completed } : t));
+  };
+
+  const deleteTodo = (todoId) => {
+    setTodos(todos.filter(t => t.id !== todoId));
+  };
+
   if (!document) return <div className="p-12 text-center text-slate-500">Loading document...</div>;
 
   const tabs = [
@@ -75,6 +114,7 @@ const DocumentView = () => {
     { id: 'notes', icon: FiList, label: 'Smart Notes' },
     { id: 'mindmap', icon: FiMap, label: 'Mind Map' },
     { id: 'quiz', icon: FiCheckSquare, label: 'Quiz' },
+    { id: 'workspace', icon: FiEdit3, label: 'Workspace' },
     { id: 'chat', icon: FiMessageSquare, label: 'AI Chat' }
   ];
 
@@ -134,7 +174,18 @@ const DocumentView = () => {
           {/* Tab Content Header */}
           <div className="flex justify-between items-center mb-8 border-b border-slate-200 dark:border-zinc-700/50 pb-5">
             <h2 className="text-3xl font-extrabold capitalize bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">{activeTab.replace('-', ' ')}</h2>
-            {activeTab !== 'chat' && (
+            {activeTab === 'workspace' ? (
+              <button 
+                onClick={saveWorkspace}
+                disabled={savingWorkspace}
+                className="btn-primary flex items-center shadow-indigo-500/30"
+              >
+                <span className="relative z-10 flex items-center">
+                  {savingWorkspace ? 'Saving...' : 'Save Workspace'}
+                  {!savingWorkspace && <FiSave className="ml-2 w-5 h-5" />}
+                </span>
+              </button>
+            ) : activeTab !== 'chat' && (
               <button 
                 onClick={() => generateContent(activeTab)}
                 disabled={loading}
@@ -159,7 +210,7 @@ const DocumentView = () => {
                 transition={{ duration: 0.3 }}
                 className="h-full"
               >
-                {!content[activeTab] && activeTab !== 'chat' ? (
+                {!content[activeTab] && activeTab !== 'chat' && activeTab !== 'workspace' ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400">
                     <div className="w-24 h-24 mb-6 bg-slate-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center border border-slate-100 dark:border-zinc-700">
                        <FiCpu className="w-10 h-10 text-slate-300 dark:text-zinc-500" />
@@ -167,10 +218,10 @@ const DocumentView = () => {
                     <p className="text-lg">Click Generate to create your {activeTab.replace('-', ' ')}.</p>
                   </div>
                 ) : activeTab === 'summary' || activeTab === 'notes' ? (
-                  <div className="prose prose-lg dark:prose-invert max-w-none prose-headings:text-indigo-600 dark:prose-headings:text-indigo-400 prose-a:text-purple-600">
-                     <pre className="whitespace-pre-wrap font-sans bg-transparent p-0 m-0 text-slate-700 dark:text-zinc-300 leading-relaxed">
+                  <div className="prose prose-lg dark:prose-invert max-w-none prose-headings:text-indigo-600 dark:prose-headings:text-indigo-400 prose-a:text-purple-600 bg-white/50 dark:bg-zinc-800/30 p-8 rounded-2xl border border-slate-200 dark:border-zinc-700/50 shadow-sm">
+                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                        {content[activeTab]?.data?.text || 'No content generated yet.'}
-                     </pre>
+                     </ReactMarkdown>
                   </div>
                 ) : activeTab === 'quiz' ? (
                   <div className="space-y-8">
@@ -201,6 +252,59 @@ const DocumentView = () => {
                          <Mermaid chart={content.mindmap.data.mermaidCode} />
                       </div>
                     )}
+                  </div>
+                ) : activeTab === 'workspace' ? (
+                  <div className="h-full flex flex-col md:flex-row gap-6">
+                    {/* Personal Notes */}
+                    <div className="flex-1 flex flex-col bg-white/50 dark:bg-zinc-800/50 p-6 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-sm">
+                      <h3 className="text-xl font-bold mb-4 text-slate-800 dark:text-zinc-100 flex items-center"><FiEdit3 className="mr-2 text-indigo-500" /> My Notes</h3>
+                      <textarea
+                        value={userNotes}
+                        onChange={(e) => setUserNotes(e.target.value)}
+                        placeholder="Type your personal notes here..."
+                        className="flex-1 w-full bg-transparent border-0 focus:ring-0 resize-none p-0 text-slate-700 dark:text-zinc-300 placeholder:text-slate-400"
+                      />
+                    </div>
+                    
+                    {/* Todo List */}
+                    <div className="w-full md:w-80 flex flex-col bg-white/50 dark:bg-zinc-800/50 p-6 rounded-2xl border border-slate-200 dark:border-zinc-700 shadow-sm">
+                      <h3 className="text-xl font-bold mb-4 text-slate-800 dark:text-zinc-100 flex items-center"><FiCheckSquare className="mr-2 text-purple-500" /> Action Items</h3>
+                      
+                      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
+                        {todos.length === 0 ? (
+                          <p className="text-slate-400 dark:text-zinc-500 text-center mt-10">No action items yet.</p>
+                        ) : (
+                          todos.map(todo => (
+                            <div key={todo.id} className={`flex items-center justify-between p-3 rounded-xl border ${todo.completed ? 'bg-slate-50 dark:bg-zinc-800/80 border-slate-100 dark:border-zinc-800' : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 shadow-sm'}`}>
+                              <div className="flex items-center space-x-3 overflow-hidden">
+                                <button onClick={() => toggleTodo(todo.id)} className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-colors ${todo.completed ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 dark:border-zinc-500 hover:border-indigo-400'}`}>
+                                  {todo.completed && <FiCheck className="w-3.5 h-3.5" />}
+                                </button>
+                                <span className={`truncate text-sm font-medium transition-all ${todo.completed ? 'text-slate-400 dark:text-zinc-500 line-through' : 'text-slate-700 dark:text-zinc-200'}`}>
+                                  {todo.text}
+                               </span>
+                              </div>
+                              <button onClick={() => deleteTodo(todo.id)} className="text-slate-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                <FiTrash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <form onSubmit={handleAddTodo} className="flex space-x-2 mt-auto">
+                        <input
+                          type="text"
+                          value={todoInput}
+                          onChange={(e) => setTodoInput(e.target.value)}
+                          placeholder="Add new task..."
+                          className="flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button type="submit" disabled={!todoInput.trim()} className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-400 dark:hover:bg-indigo-900/60 p-2 rounded-lg transition-colors disabled:opacity-50">
+                          <FiPlus className="w-5 h-5" />
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 ) : (
                   <ChatInterface documentId={id} />

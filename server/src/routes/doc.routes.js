@@ -11,7 +11,8 @@ const {
   softDeleteDocument,
   restoreDocument,
   permanentDeleteDocument,
-  getDocumentContent
+  getDocumentContent,
+  updateWorkspace
 } = require('../controllers/doc.controller');
 
 // All routes are protected
@@ -23,6 +24,7 @@ router.get('/recycled', getRecycledDocuments);
 router.get('/:id', getDocumentById);
 router.get('/:id/content', getDocumentContent);
 router.put('/:id', renameDocument);
+router.put('/:id/workspace', updateWorkspace);
 router.delete('/:id', softDeleteDocument);
 router.post('/:id/restore', restoreDocument);
 router.delete('/:id/permanent', permanentDeleteDocument);
