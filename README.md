@@ -1,4 +1,4 @@
-# StudyMind AI 🧠✨
+# StudyMind AI ✨
 
 Welcome to **StudyMind AI**, a next-generation, AI-powered study companion designed to help you learn faster and more effectively. By leveraging cutting-edge Large Language Models (Google Gemini) and advanced RAG (Retrieval-Augmented Generation), StudyMind transforms any document into an interactive, personalized learning environment.
 
@@ -7,7 +7,7 @@ Welcome to **StudyMind AI**, a next-generation, AI-powered study companion desig
 
 ---
 
-## 🚀 Features
+## Features
 
 *   **📄 Intelligent Document Processing:** Upload any PDF, TXT, or Markdown file. The system chunks, vectorizes, and analyzes your material automatically.
 *   **📝 Smart Summaries & Notes:** Instantly generate concise summaries and comprehensive study notes with beautiful Markdown formatting, bold headings, and lists.
@@ -20,7 +20,7 @@ Welcome to **StudyMind AI**, a next-generation, AI-powered study companion desig
 
 ---
 
-## 💻 Tech Stack
+## Tech Stack
 
 ### Frontend
 *   **React (Vite)**
@@ -40,9 +40,13 @@ Welcome to **StudyMind AI**, a next-generation, AI-powered study companion desig
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
-*(Add your screenshots to the repository to display them here!)*
+<img width="522" height="685" alt="Screenshot 2026-07-18 at 1 46 28 PM" src="https://github.com/user-attachments/assets/15ee9ce9-1711-4772-88e8-b060533f0874" />
+<img width="1699" height="944" alt="Screenshot 2026-07-18 at 1 47 03 PM" src="https://github.com/user-attachments/assets/f7366beb-028f-4301-9ba2-d6d6267e91be" />
+<img width="1697" height="857" alt="Screenshot 2026-07-18 at 3 13 44 PM" src="https://github.com/user-attachments/assets/59a02c45-015f-4dcb-b50f-62652855fa9b" />
+<img width="868" height="650" alt="Screenshot 2026-07-18 at 3 13 52 PM" src="https://github.com/user-attachments/assets/d2205959-b57b-4ae4-84b0-f768ce7969f0" />
+<img width="1049" height="710" alt="Screenshot 2026-07-18 at 1 48 00 PM" src="https://github.com/user-attachments/assets/a3231618-a8c1-4417-8df3-e71f70e5b08f" />
 
 *   **Dashboard & Uploads:** Clean, drag-and-drop interface with recent activity tracking.
 *   **Document View:** Multi-tabbed interface for Summaries, Notes, Chat, and Workspace.
@@ -90,9 +94,7 @@ The application will launch on `http://localhost:5173`.
 
 ---
 
-## 🧠 How it Works (Under the Hood)
+## How it Works (Under the Hood)
 When a document is uploaded, the Node.js backend uses `pdf-parse` to extract raw text, which is then passed through a LangChain `RecursiveCharacterTextSplitter`. These chunks are fed directly into the Gemini model's massive context window to generate accurate summaries, mind maps, quizzes, and answer conversational queries—completely mitigating hallucination and keeping the AI strictly focused on your material!
 
 ---
-
-*Built with ❤️ for modern learners.*
